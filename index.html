@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Weather Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Load Chart.js for graphing -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Weather Station Telemetry</h1>
+            <p>Live data streaming from ThingSpeak</p>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- Current Stats Card -->
+            <div class="card">
+                <h2>Latest Reading</h2>
+                <div class="data-point">
+                    <span class="label">Temperature:</span>
+                    <span class="value" id="current-temp">-- °C</span>
+                </div>
+                <div class="data-point">
+                    <span class="label">Humidity:</span>
+                    <span class="value" id="current-hum">-- %</span>
+                </div>
+                <div class="data-point">
+                    <span class="label">Pressure:</span>
+                    <span class="value" id="current-pre">-- hPa</span>
+                </div>
+            </div>
+
+            <!-- Prediction Card -->
+            <div class="card highlight">
+                <h2>Tomorrow's Prediction</h2>
+                <p class="subtitle">Based on 24-hour linear regression trend</p>
+                <div class="data-point">
+                    <span class="label">Est. Baseline Temp:</span>
+                    <span class="value" id="predicted-temp">-- °C</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graph Card -->
+        <div class="card chart-container">
+            <h2>Temperature & Humidity Trend</h2>
+            <canvas id="weatherChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Load your logic last -->
+    <script src="script.js"></script>
+</body>
+</html>
