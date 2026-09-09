@@ -1,137 +1,148 @@
-// Your specific ThingSpeak Channel ID
 const channelID = "3465974";
-const readAPIKey = "O96LBWT2V5EP0O88";
+const readAPIKey = "O96LBWT2V5EP0O88"; // Paste your Read API Key here!
 
-// The updated URL that includes your API key
-const url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${readAPIKey}&results=288`;
-// Ensure the page is loaded before running the script
+// Global variables to store the chart objects so we can destroy them later
+let tempChartObj = null;
+let humChartObj = null;
+let preChartObj = null;
+
 document.addEventListener("DOMContentLoaded", () => {
+    // Fetch data immediately when the page loads
     fetchData();
+
+    // Listen for the dropdown to change, and fetch new data when it does
+    document.getElementById('timeRange').addEventListener('change', fetchData);
 });
 
 async function fetchData() {
+    // Read how many minutes the user selected from the dropdown
+    const minutes = document.getElementById('timeRange').value;
+    
+    // Dynamically insert the minutes into the ThingSpeak URL
+    const url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${readAPIKey}&minutes=${minutes}`;
+
     try {
         const response = await fetch(url);
         const data = await response.json();
-        
         processData(data.feeds);
     } catch (error) {
         console.error("Error fetching data from ThingSpeak:", error);
-        document.getElementById('current-temp').innerText = "Error loading";
     }
 }
 
 function processData(feeds) {
-    if (feeds.length === 0) return;
+    if (!feeds || feeds.length === 0) return;
 
-    // Arrays to hold the data for the chart
     const timestamps = [];
     const temperatures = [];
     const humidities = [];
+    const pressures = [];
 
-    // Parse the ThingSpeak JSON
     feeds.forEach(feed => {
-        // Convert ThingSpeak timestamp to local time
         const date = new Date(feed.created_at);
         timestamps.push(date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
         
-        // Push data (checking if null, default to 0 to prevent chart breaks)
-        temperatures.push(parseFloat(feed.field1) || 0); 
-        humidities.push(parseFloat(feed.field3) || 0);
+        temperatures.push(parseFloat(feed.field1) || null); 
+        pressures.push(parseFloat(feed.field2) || null); 
+        humidities.push(parseFloat(feed.field3) || null);
     });
 
-    // 1. Update Current Stats UI with the absolute latest reading (last item in array)
+    // Update Current Stats UI
     const latestFeed = feeds[feeds.length - 1];
     document.getElementById('current-temp').innerText = `${parseFloat(latestFeed.field1).toFixed(2)} °C`;
-    document.getElementById('current-hum').innerText = `${parseFloat(latestFeed.field3).toFixed(2)} %`;
     document.getElementById('current-pre').innerText = `${parseFloat(latestFeed.field2).toFixed(2)} hPa`;
+    document.getElementById('current-hum').innerText = `${parseFloat(latestFeed.field3).toFixed(2)} %`;
 
-    // 2. Generate Prediction
+    // Generate Prediction
     const predictedTemp = calculateLinearRegressionPrediction(temperatures);
     document.getElementById('predicted-temp').innerText = `${predictedTemp} °C`;
 
-    // 3. Render Chart
-    drawChart(timestamps, temperatures, humidities);
+    // Draw the three separate charts
+    drawCharts(timestamps, temperatures, humidities, pressures);
 }
 
-// Simple Linear Regression to find the trend line of the dataset
 function calculateLinearRegressionPrediction(dataArray) {
-    let n = dataArray.length;
+    // Filter out nulls for the math
+    const cleanData = dataArray.filter(val => val !== null);
+    let n = cleanData.length;
     if (n === 0) return "--";
 
     let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
     
-    // X is time step (0 to n), Y is temperature
     for (let i = 0; i < n; i++) {
         sumX += i;
-        sumY += dataArray[i];
-        sumXY += (i * dataArray[i]);
+        sumY += cleanData[i];
+        sumXY += (i * cleanData[i]);
         sumXX += (i * i);
     }
 
-    // Calculate slope (m) and y-intercept (b)
     let slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
     let intercept = (sumY - slope * sumX) / n;
 
-    // Predict the value a full day ahead 
-    // If you log every 5 mins, there are 288 logs in a day. 
-    // We want the value at position (n + 288)
+    // Predict 288 steps ahead (24 hours at 5 min intervals)
     let predictedPosition = n + 288;
     let prediction = (slope * predictedPosition) + intercept;
 
     return prediction.toFixed(2);
 }
 
-function drawChart(labels, tempData, humData) {
-    const ctx = document.getElementById('weatherChart').getContext('2d');
-    
-    new Chart(ctx, {
+function drawCharts(labels, tempData, humData, preData) {
+    // 1. Destroy existing charts if they exist to prevent glitches
+    if (tempChartObj) tempChartObj.destroy();
+    if (humChartObj) humChartObj.destroy();
+    if (preChartObj) preChartObj.destroy();
+
+    // 2. Draw Temperature Chart
+    const ctxTemp = document.getElementById('tempChart').getContext('2d');
+    tempChartObj = new Chart(ctxTemp, {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [
-                {
-                    label: 'Temperature (°C)',
-                    data: tempData,
-                    borderColor: '#e74c3c',
-                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                    yAxisID: 'y',
-                    tension: 0.3,
-                    fill: true
-                },
-                {
-                    label: 'Humidity (%)',
-                    data: humData,
-                    borderColor: '#3498db',
-                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                    yAxisID: 'y1',
-                    tension: 0.3,
-                    fill: true
-                }
-            ]
+            datasets: [{
+                label: 'Temperature (°C)',
+                data: tempData,
+                borderColor: '#e74c3c',
+                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                tension: 0.3,
+                fill: true
+            }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
-            scales: {
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    title: { display: true, text: 'Temperature (°C)' }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    title: { display: true, text: 'Humidity (%)' },
-                    grid: { drawOnChartArea: false } // Prevent grid line overlapping
-                }
-            }
-        }
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // 3. Draw Humidity Chart
+    const ctxHum = document.getElementById('humChart').getContext('2d');
+    humChartObj = new Chart(ctxHum, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Humidity (%)',
+                data: humData,
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // 4. Draw Pressure Chart
+    const ctxPre = document.getElementById('preChart').getContext('2d');
+    preChartObj = new Chart(ctxPre, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Pressure (hPa)',
+                data: preData,
+                borderColor: '#2ecc71',
+                backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
     });
 }
