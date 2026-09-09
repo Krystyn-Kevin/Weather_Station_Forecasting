@@ -95,8 +95,8 @@ select {
     color: #007bff;
 }
 
-.chart-container {
-    width: 100%;
-    height: 350px; /* Slightly shorter so they fit better on screen */
+.chart-wrapper {
     position: relative;
+    height: 300px; /* Chart specifically gets 300px to breathe */
+    width: 100%;
 }
