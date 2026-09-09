@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESP32 Weather Dashboard</title>
-    <link rel="stylesheet" href="css/style.css">
-    <!-- Load Chart.js for graphing -->
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -14,6 +13,16 @@
             <h1>Weather Station Telemetry</h1>
             <p>Live data streaming from ThingSpeak</p>
         </header>
+
+        <!-- Control Panel -->
+        <div class="card controls">
+            <label for="timeRange"><strong>Time Range:</strong></label>
+            <select id="timeRange">
+                <option value="60">Last 60 Minutes</option>
+                <option value="720">Last 12 Hours</option>
+                <option value="1440" selected>Last 24 Hours</option>
+            </select>
+        </div>
 
         <div class="dashboard-grid">
             <!-- Current Stats Card -->
@@ -36,7 +45,7 @@
             <!-- Prediction Card -->
             <div class="card highlight">
                 <h2>Tomorrow's Prediction</h2>
-                <p class="subtitle">Based on 24-hour linear regression trend</p>
+                <p class="subtitle">Based on linear regression trend</p>
                 <div class="data-point">
                     <span class="label">Est. Baseline Temp:</span>
                     <span class="value" id="predicted-temp">-- °C</span>
@@ -44,14 +53,23 @@
             </div>
         </div>
 
-        <!-- Graph Card -->
+        <!-- Separate Graph Cards -->
         <div class="card chart-container">
-            <h2>Temperature & Humidity Trend</h2>
-            <canvas id="weatherChart"></canvas>
+            <h2>Temperature Trend</h2>
+            <canvas id="tempChart"></canvas>
+        </div>
+        
+        <div class="card chart-container">
+            <h2>Humidity Trend</h2>
+            <canvas id="humChart"></canvas>
+        </div>
+
+        <div class="card chart-container">
+            <h2>Pressure Trend</h2>
+            <canvas id="preChart"></canvas>
         </div>
     </div>
 
-    <!-- Load your logic last -->
-    <script src="js/script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
